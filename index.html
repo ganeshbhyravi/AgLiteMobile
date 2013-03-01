@@ -1,0 +1,193 @@
+<!DOCTYPE html> 
+<html> 
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1"> 
+	<title>agLite Platform: Login</title>
+	<link rel="stylesheet" type="text/css" href="./css/jquery-mobile.css" />
+	<link rel="stylesheet" type="text/css" href="./css/aglite-mobile.css" />
+	<style>
+	</style>
+	 <script src="phonegap.js"></script>
+     <script type="text/javascript" src="./js/lib/jquery.js"></script>
+     <script type="text/javascript" src="./js/lib/jquery-mobile.js"></script>
+     <script type="text/javascript" src="./js/lib/aglite-mobile-base.js"></script>
+     <script type="text/javascript" src="./js/lib/datenumbervalidation.js"></script>
+	 <script src="js/main.js"></script>
+	<script>
+		var mobileReqKey = "mobile";
+		var contextPath = 'http://192.168.110.174:8889/agweb';
+		/*var fixgeometry = function() {
+			scroll(0, 0);
+
+			var header = $(".header:visible");
+			var footer = $(".footer:visible");
+			var content = $(".content:visible");
+			var viewport_height = $(window).height();
+			
+			var content_height = viewport_height - header.outerHeight() - footer.outerHeight();
+			
+			content_height -= (content.outerHeight() - content.height());
+			content.height(content_height);
+		  }; 
+		*/
+		  $(document).ready(function() {
+			//$(window).bind("orientationchange resize pageshow", fixgeometry);
+			$('#userNameTxt').focus();
+			$('#passwordTxt').keypress(function(e) {
+				if ( e.which == 13 ) {
+					e.preventDefault();
+					doLogin();
+					return false;
+				}
+			});
+			$( "#dialog" ).bind({
+			   create: function(event, ui) {
+					console.log(ui);
+			   }
+			});
+		  });
+		$( '#login' ).live( 'pageinit',function(event){
+			  $('#loginBtn').click(function(){
+				doLogin();
+			  });
+		});
+        function doLogin() {
+            //$('#loginBtn').button('disable');
+            $('#loginBtn').addClass('ui-disabled')
+            var userName = document.getElementById('userNameTxt').value;
+            var password = document.getElementById('passwordTxt').value;
+            var obj = {
+                success: false
+            };
+            
+            if (!(userName) || !(password)) {
+                aglite.Mobile.Messages.error('error','Please enter both username and password!');
+                //$('#loginBtn').button('enable');
+                $('#loginBtn').removeClass('ui-disabled')
+                return;
+            }
+            $.support.cors = true;
+			jQuery.ajax({
+				url: contextPath + '/j_spring_security_check',
+				type: 'POST',
+				//async: true,
+				data: {
+                    j_username: userName,
+                    j_password: password,
+                    browserTZ:new Date().getTimezoneOffset(),
+                    browserTZDST:new Date().isDST(),
+                    browserTZName:DateUtil.getTimezoneName(),
+                    force:$('#force').val()
+                },
+				//dataType: 'json',
+				success: function (data, textStatus, jqXHR) {
+                    var response = jQuery.decode(jqXHR.responseText);
+                    var obj = jQuery.extend({}, response);
+                    if (obj.success) {
+                        loadPlatform();
+                    } else {
+						if (obj.warnings && obj.warnings[0] === 'ALREADY-LOGGED-IN') {
+							var message = 'User \'' + document.getElementById('userNameTxt').value + '\' is already logged in.<br/>Click \'OK\' to terminate the existing session and login.';
+							$('#confirmDialog').html(message);
+							jQuery.mobile.changePage("#dialog");
+						} else {
+							aglite.Mobile.Messages.error('error',obj.errors? obj.errors : obj);
+						}
+                        //$('#loginBtn').button('enable');
+                        $('#loginBtn').removeClass('ui-disabled')
+                    }
+                },
+                error: function (response, textStatus, errorThrown) {
+                    response = jQuery.decode(response.responseText);
+                    var obj = jQuery.extend({}, response);
+                    if (obj.redirectURL) {
+                            //Util.redirectURL(obj.redirectURL);
+                    } else {
+                        //aglite.Mobile.Messages.error('error',obj);
+                        aglite.Mobile.Messages.error('error',obj.errors? obj.errors : obj);
+                    }
+                     //$('#loginBtn').button('enable');
+                     $('#loginBtn').removeClass('ui-disabled')
+                }
+			});
+            return false;
+        }
+        function loadPlatform() {
+            //$('#loginBtn').button('disable');
+            $('#loginBtn').addClass('ui-disabled')
+            //window.location = contextPath + '/pages/main?' + mobileReqKey + '=t';
+			window.location = "home.html";
+		}
+		function forceLogin(ok) {
+            if (ok == 1) {
+                document.getElementById('force').value = true;
+                doLogin();
+            } else {
+                aglite.Mobile.Messages.warn('Warning', 'User \'' + document.getElementById('userNameTxt').value + '\' is already logged in.');
+                $('#loginBtn').removeClass('ui-disabled')
+            }
+        }
+	</script>
+</head> 
+
+
+<body> 
+
+<div data-role="page" id="login" data-theme="d">
+	<div data-role="header" data-position="fixed" data-theme="c">
+	</div>
+	<div data-role="content" class="content">	
+		<table style="width:90%;" align="center" class="ui-listview ui-listview-inset ui-corner-all ui-shadow">
+			<tbody align="center"> 
+			<tr><td>
+				<div style="margin: 0pt auto; text-align: center;">
+					<img src="./images/logo.png"></img>
+				</div>
+			</td></tr>
+			<tr><td>
+				<div style="width:85%;" align="center">
+					<div data-role="fieldcontain" class="ui-hide-label" style="border-bottom-width: 0;">
+						<label for="userNameTxt">User Name:</label>
+						<input type="text" name="name" id="userNameTxt" value=""  placeholder="User Name"/>
+					</div>
+					<div data-role="fieldcontain" class="ui-hide-label" style="border-bottom-width: 0;">
+						<label for="passwordTxt">Password: </label>
+						<input type="password" name="passwordTxt" id="passwordTxt" value=""  placeholder="Password"/>
+						<input id="force" type="hidden" value="false" />
+					</div>
+					<a data-role="button" data-theme="b" data-inline="true" class="ag-btn" id="loginBtn">&nbsp;&nbsp;&nbsp;Login&nbsp;&nbsp;</a>
+										<br/>
+					<a data-role="button" data-theme="b" data-inline="true" class="ag-btn" id="registerBtn" href="./register?mobile=t&termsOfUse=t">Register</a>
+									</div>
+			</td></tr>
+									<tr><td>
+			<ul data-role="listview" data-inset="true" data-icon="star" style="width:75%;">
+				<li data-role="list-divider">External Pages:</li>
+																<li><a href="./public?pageName=publicmobilepage&version=aglitedemo-3.0.0.8&mobile=t" class="agl-public-link" title="demo mobile public page">demo mobile public page</a></li>
+							</ul>
+			</td></tr>
+						</tbody>
+		</table>
+	</div>
+	<div data-role="footer" data-position="fixed">
+	</div>
+</div>
+<div data-role="dialog" id="dialog">
+	<div data-role="header" data-theme="b">
+		<h3>Confirmation</h3>
+
+	</div>
+
+	<div data-role="content" data-theme="c">
+		<span id="confirmDialog" style="font-size: 15px;"></span>
+		<div class="ui-grid-a">
+			<div class="ui-block-b"><a onclick="forceLogin(1)" data-mini="true" data-role="button" data-inline="true" data-rel="back" data-theme="b" class="ag-btn" style="float:right;">Ok</a></div>
+			<div class="ui-block-c"><a onclick="forceLogin(2)" data-mini="true" data-role="button" data-inline="true" data-rel="back" data-theme="b" class="ag-btn">Cancel</a></div>
+		</div>
+	</div>
+</div>
+
+</body>
+</html>
